@@ -1,10 +1,15 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 
 function App() {
   return (
-    <div className="app-container">
-      <h1>Hello, Nebula Developer!</h1>
-    </div>
+    <Router>
+      <div className="app-container">
+        <Routes>
+          <Route path="/" element={<h1>Router is working!</h1>} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

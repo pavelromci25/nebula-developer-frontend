@@ -71,14 +71,18 @@ const DeveloperDashboard: React.FC = () => {
   });
   const [editingApp, setEditingApp] = useState<App | null>(null);
 
+  console.log('DeveloperDashboard: userId=', userId, 'isTelegram=', isTelegram);
+
   useEffect(() => {
     const fetchDeveloper = async () => {
       try {
+        console.log('Fetching developer data for userId:', userId);
         const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}`);
         if (!response.ok) {
           throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
+        console.log('Developer data:', data);
         setDeveloper(data);
         setError(null);
       } catch (error) {
@@ -89,17 +93,21 @@ const DeveloperDashboard: React.FC = () => {
 
     if (isTelegram && userId !== 'guest') {
       fetchDeveloper();
+    } else {
+      console.log('Not fetching developer data: isTelegram=', isTelegram, 'userId=', userId);
     }
   }, [userId, isTelegram]);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log('Fetching stats for userId:', userId);
         const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/stats`);
         if (!response.ok) {
           throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
+        console.log('Stats data:', data);
         setStats(data);
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error);
@@ -108,11 +116,14 @@ const DeveloperDashboard: React.FC = () => {
 
     if (isTelegram && userId !== 'guest') {
       fetchStats();
+    } else {
+      console.log('Not fetching stats: isTelegram=', isTelegram, 'userId=', userId);
     }
   }, [userId, isTelegram]);
 
   const handleAddApp = async () => {
     try {
+      console.log('Adding new app:', newApp);
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,6 +133,7 @@ const DeveloperDashboard: React.FC = () => {
         throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
       }
       const addedApp = await response.json();
+      console.log('Added app:', addedApp);
       setDeveloper(prev => prev ? { ...prev, apps: [...prev.apps, addedApp] } : prev);
       setNewApp({
         type: 'game',
@@ -150,6 +162,7 @@ const DeveloperDashboard: React.FC = () => {
   const handleEditApp = async () => {
     if (!editingApp) return;
     try {
+      console.log('Editing app:', editingApp);
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/apps/${editingApp.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -159,6 +172,7 @@ const DeveloperDashboard: React.FC = () => {
         throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
       }
       const updatedApp = await response.json();
+      console.log('Updated app:', updatedApp);
       setDeveloper(prev => prev ? {
         ...prev,
         apps: prev.apps.map(app => app.id === updatedApp.id ? updatedApp : app),
@@ -173,6 +187,7 @@ const DeveloperDashboard: React.FC = () => {
 
   const handlePromote = async (appId: string, type: 'catalog' | 'category', duration: number) => {
     try {
+      console.log('Promoting app:', { appId, type, duration });
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,9 +197,11 @@ const DeveloperDashboard: React.FC = () => {
         throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
       }
       const result = await response.json();
+      console.log('Promotion result:', result);
       alert(result.message);
       const developerResponse = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}`);
       const updatedDeveloper = await developerResponse.json();
+      console.log('Updated developer:', updatedDeveloper);
       setDeveloper(updatedDeveloper);
     } catch (error) {
       console.error('Ошибка при активации продвижения:', error);
@@ -192,7 +209,10 @@ const DeveloperDashboard: React.FC = () => {
     }
   };
 
+  console.log('Rendering DeveloperDashboard: developer=', developer, 'error=', error);
+
   if (!isTelegram) {
+    console.log('Not in Telegram environment');
     return (
       <div className="content">
         <h2>Ошибка</h2>
@@ -202,6 +222,7 @@ const DeveloperDashboard: React.FC = () => {
   }
 
   if (error) {
+    console.log('Error state:', error);
     return (
       <div className="content">
         <h2>Ошибка</h2>
@@ -211,9 +232,11 @@ const DeveloperDashboard: React.FC = () => {
   }
 
   if (!developer) {
+    console.log('Loading state');
     return <div className="content">Загрузка...</div>;
   }
 
+  console.log('Rendering main content');
   return (
     <div className="content slide-in">
       <div className="bottom-menu">
