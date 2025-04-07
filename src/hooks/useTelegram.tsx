@@ -1,26 +1,61 @@
-// Определяем интерфейс для Telegram Web App
+import { useState, useEffect } from 'react';
+
+interface TelegramUser {
+  id?: number;
+}
+
+interface InitDataUnsafe {
+  user?: TelegramUser;
+}
+
 interface TelegramWebApp {
-  initDataUnsafe: {
-    user?: {
-      id?: number;
-    };
-  };
+  initDataUnsafe: InitDataUnsafe;
 }
 
-interface Telegram {
-  WebApp: TelegramWebApp;
-}
-
-// Расширяем глобальный интерфейс Window
 declare global {
   interface Window {
-    Telegram?: Telegram;
+    Telegram?: {
+      WebApp: TelegramWebApp;
+    };
   }
 }
 
-export const useTelegram = () => {
-  const tg = window.Telegram?.WebApp;
+export function useTelegram() {
+  const [userId, setUserId] = useState<string>('guest');
+  const [isTelegram, setIsTelegram] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadUserData = () => {
+      if (window.Telegram && window.Telegram.WebApp) {
+        const webApp = window.Telegram.WebApp;
+        const initDataUnsafe = webApp.initDataUnsafe;
+        const user = initDataUnsafe?.user;
+
+        if (user && user.id) {
+          setUserId(user.id.toString());
+          setIsTelegram(true);
+        } else {
+          setUserId('guest');
+          setIsTelegram(false);
+        }
+      } else {
+        setUserId('guest');
+        setIsTelegram(false);
+      }
+    };
+
+    loadUserData();
+
+    const script = document.querySelector('script[src="https://telegram.org/js/telegram-web-app.js"]');
+    if (script && !window.Telegram?.WebApp) {
+      const loadHandler = () => loadUserData();
+      script.addEventListener('load', loadHandler);
+      return () => script.removeEventListener('load', loadHandler);
+    }
+  }, []);
+
   return {
-    userId: tg?.initDataUnsafe?.user?.id?.toString() || 'guest',
+    userId,
+    isTelegram,
   };
-};
+}
