@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTelegram } from '../hooks/useTelegram';
 import { FaUser, FaPlus, FaEdit, FaChartBar, FaShoppingCart } from 'react-icons/fa';
 
@@ -52,7 +52,7 @@ const DeveloperDashboard: React.FC = () => {
   const [developer, setDeveloper] = useState<Developer | null>(null);
   const [stats, setStats] = useState<Stat[]>([]);
   const [newApp, setNewApp] = useState({
-    type: 'game',
+    type: 'game' as 'game' | 'app',
     name: '',
     shortDescription: '',
     longDescription: '',
