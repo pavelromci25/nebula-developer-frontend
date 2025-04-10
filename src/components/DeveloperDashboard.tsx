@@ -5,7 +5,7 @@ import { FaUser, FaPlus, FaEdit, FaChartBar, FaShoppingCart } from 'react-icons/
 interface Developer {
   userId: string;
   registrationDate: string;
-  telegramStarsBalance: number;
+  starsBalance: number;
   referralCode: string;
   apps: App[];
 }
@@ -16,9 +16,11 @@ interface App {
   name: string;
   shortDescription: string;
   longDescription?: string;
-  category: string;
-  additionalCategories: string[];
-  categories: string[];
+  categoryGame?: string;
+  categoryApps?: string;
+  additionalCategoriesGame?: string[];
+  additionalCategoriesApps?: string[];
+  categories?: string[];
   icon: string;
   banner?: string;
   gallery: string[];
@@ -32,6 +34,12 @@ interface App {
   contactInfo: string;
   status: 'added' | 'onModeration' | 'rejected';
   rejectionReason?: string;
+  linkApp?: string;
+  startPromoCatalog?: string;
+  finishPromoCatalog?: string;
+  startPromoCategory?: string;
+  finishPromoCategory?: string;
+  editCount?: number;
 }
 
 interface Stat {
@@ -46,6 +54,9 @@ interface Stat {
   platforms: string[];
 }
 
+const gameCategories = ['Arcade', 'Sport', 'Card', 'Race'];
+const appCategories = ['Useful', 'Business', 'Personal', 'Simple'];
+
 const DeveloperDashboard: React.FC = () => {
   const { userId, isTelegram } = useTelegram();
   const [activeTab, setActiveTab] = useState('profile');
@@ -57,8 +68,10 @@ const DeveloperDashboard: React.FC = () => {
     name: '',
     shortDescription: '',
     longDescription: '',
-    category: '',
-    additionalCategories: [] as string[],
+    categoryGame: '',
+    categoryApps: '',
+    additionalCategoriesGame: [] as string[],
+    additionalCategoriesApps: [] as string[],
     icon: '',
     gallery: [] as string[],
     video: '',
@@ -68,6 +81,7 @@ const DeveloperDashboard: React.FC = () => {
     supportsTON: false,
     supportsTelegramStars: false,
     contactInfo: '',
+    linkApp: '',
   });
   const [editingApp, setEditingApp] = useState<App | null>(null);
 
@@ -87,7 +101,8 @@ const DeveloperDashboard: React.FC = () => {
         setError(null);
       } catch (error) {
         console.error('Ошибка при загрузке данных разработчика:', error);
-        setError('Не удалось загрузить данные. Проверьте ваш userId или попробуйте позже.');
+        const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+        setError('Не удалось загрузить данные. Проверьте ваш userId или попробуйте позже: ' + errorMessage);
       }
     };
 
@@ -127,10 +142,17 @@ const DeveloperDashboard: React.FC = () => {
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newApp),
+        body: JSON.stringify({
+          ...newApp,
+          categoryGame: newApp.type === 'game' ? newApp.categoryGame : undefined,
+          categoryApps: newApp.type === 'app' ? newApp.categoryApps : undefined,
+          additionalCategoriesGame: newApp.type === 'game' ? newApp.additionalCategoriesGame : undefined,
+          additionalCategoriesApps: newApp.type === 'app' ? newApp.additionalCategoriesApps : undefined,
+        }),
       });
       if (!response.ok) {
-        throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(`Ошибка: ${response.status} ${response.statusText} - ${errorData.error}`);
       }
       const addedApp = await response.json();
       console.log('Added app:', addedApp);
@@ -140,8 +162,10 @@ const DeveloperDashboard: React.FC = () => {
         name: '',
         shortDescription: '',
         longDescription: '',
-        category: '',
-        additionalCategories: [],
+        categoryGame: '',
+        categoryApps: '',
+        additionalCategoriesGame: [],
+        additionalCategoriesApps: [],
         icon: '',
         gallery: [],
         video: '',
@@ -151,11 +175,13 @@ const DeveloperDashboard: React.FC = () => {
         supportsTON: false,
         supportsTelegramStars: false,
         contactInfo: '',
+        linkApp: '',
       });
       alert('Приложение успешно добавлено и отправлено на модерацию!');
     } catch (error) {
       console.error('Ошибка при добавлении приложения:', error);
-      alert('Ошибка при добавлении приложения.');
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при добавлении приложения: ' + errorMessage);
     }
   };
 
@@ -166,10 +192,17 @@ const DeveloperDashboard: React.FC = () => {
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/apps/${editingApp.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingApp),
+        body: JSON.stringify({
+          ...editingApp,
+          categoryGame: editingApp.type === 'game' ? editingApp.categoryGame : undefined,
+          categoryApps: editingApp.type === 'app' ? editingApp.categoryApps : undefined,
+          additionalCategoriesGame: editingApp.type === 'game' ? editingApp.additionalCategoriesGame : undefined,
+          additionalCategoriesApps: editingApp.type === 'app' ? editingApp.additionalCategoriesApps : undefined,
+        }),
       });
       if (!response.ok) {
-        throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(`Ошибка: ${response.status} ${response.statusText} - ${errorData.error}`);
       }
       const updatedApp = await response.json();
       console.log('Updated app:', updatedApp);
@@ -178,23 +211,25 @@ const DeveloperDashboard: React.FC = () => {
         apps: prev.apps.map(app => app.id === updatedApp.id ? updatedApp : app),
       } : prev);
       setEditingApp(null);
-      alert('Приложение успешно обновлено!');
+      alert('Приложение успешно обновлено и отправлено на повторную модерацию!');
     } catch (error) {
       console.error('Ошибка при обновлении приложения:', error);
-      alert('Ошибка при обновлении приложения.');
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при обновлении приложения: ' + errorMessage);
     }
   };
 
-  const handlePromote = async (appId: string, type: 'catalog' | 'category', duration: number) => {
+  const handlePromote = async (appId: string, type: 'catalog' | 'category') => {
     try {
-      console.log('Promoting app:', { appId, type, duration });
+      console.log('Promoting app:', { appId, type });
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId, type, duration }),
+        body: JSON.stringify({ appId, type }),
       });
       if (!response.ok) {
-        throw new Error(`Ошибка: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(`Ошибка: ${response.status} ${response.statusText} - ${errorData.error}`);
       }
       const result = await response.json();
       console.log('Promotion result:', result);
@@ -205,7 +240,8 @@ const DeveloperDashboard: React.FC = () => {
       setDeveloper(updatedDeveloper);
     } catch (error) {
       console.error('Ошибка при активации продвижения:', error);
-      alert('Ошибка при активации продвижения.');
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при активации продвижения: ' + errorMessage);
     }
   };
 
@@ -284,7 +320,7 @@ const DeveloperDashboard: React.FC = () => {
             <div className="card">
               <p className="card-text"><strong>Дата регистрации:</strong> {new Date(developer.registrationDate).toLocaleDateString()}</p>
               <p className="card-text"><strong>Количество приложений:</strong> {developer.apps.length}</p>
-              <p className="card-text"><strong>Баланс Telegram Stars:</strong> {developer.telegramStarsBalance || 0}</p>
+              <p className="card-text"><strong>Баланс Stars:</strong> {developer.starsBalance || 0}</p>
               <p className="card-text"><strong>Реферальный код:</strong> {developer.referralCode}</p>
               <button className="button" onClick={() => window.open('https://t.me/admin_contact', '_blank')}>
                 Связаться с администрацией
@@ -301,7 +337,7 @@ const DeveloperDashboard: React.FC = () => {
             <div className="card">
               <select
                 value={newApp.type}
-                onChange={(e) => setNewApp({ ...newApp, type: e.target.value as 'game' | 'app' })}
+                onChange={(e) => setNewApp({ ...newApp, type: e.target.value as 'game' | 'app', categoryGame: '', categoryApps: '', additionalCategoriesGame: [], additionalCategoriesApps: [] })}
                 className="input"
               >
                 <option value="game">Игра</option>
@@ -347,20 +383,63 @@ const DeveloperDashboard: React.FC = () => {
                 onChange={(e) => setNewApp({ ...newApp, video: e.target.value })}
                 className="input"
               />
-              <input
-                type="text"
-                placeholder="Основная категория"
-                value={newApp.category}
-                onChange={(e) => setNewApp({ ...newApp, category: e.target.value })}
-                className="input"
-              />
-              <input
-                type="text"
-                placeholder="Дополнительные категории (через запятую)"
-                value={newApp.additionalCategories.join(', ')}
-                onChange={(e) => setNewApp({ ...newApp, additionalCategories: e.target.value.split(',').map(s => s.trim()) })}
-                className="input"
-              />
+              {newApp.type === 'game' ? (
+                <>
+                  <select
+                    value={newApp.categoryGame}
+                    onChange={(e) => setNewApp({ ...newApp, categoryGame: e.target.value })}
+                    className="input"
+                  >
+                    <option value="">Выберите основную категорию</option>
+                    {gameCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <select
+                    multiple
+                    value={newApp.additionalCategoriesGame}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      if (selected.length <= 2) {
+                        setNewApp({ ...newApp, additionalCategoriesGame: selected });
+                      }
+                    }}
+                    className="input"
+                  >
+                    {gameCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <select
+                    value={newApp.categoryApps}
+                    onChange={(e) => setNewApp({ ...newApp, categoryApps: e.target.value })}
+                    className="input"
+                  >
+                    <option value="">Выберите основную категорию</option>
+                    {appCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <select
+                    multiple
+                    value={newApp.additionalCategoriesApps}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      if (selected.length <= 2) {
+                        setNewApp({ ...newApp, additionalCategoriesApps: selected });
+                      }
+                    }}
+                    className="input"
+                  >
+                    {appCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </>
+              )}
               <input
                 type="text"
                 placeholder="Платформы (через запятую)"
@@ -380,6 +459,13 @@ const DeveloperDashboard: React.FC = () => {
                 placeholder="Контакты для связи"
                 value={newApp.contactInfo}
                 onChange={(e) => setNewApp({ ...newApp, contactInfo: e.target.value })}
+                className="input"
+              />
+              <input
+                type="text"
+                placeholder="Ссылка на приложение (https://t.me/...)"
+                value={newApp.linkApp}
+                onChange={(e) => setNewApp({ ...newApp, linkApp: e.target.value })}
                 className="input"
               />
               <label>
@@ -421,6 +507,7 @@ const DeveloperDashboard: React.FC = () => {
                 <h3 className="card-title">{app.name}</h3>
                 <p className="card-text"><strong>Статус:</strong> {app.status}</p>
                 {app.rejectionReason && <p className="card-text"><strong>Причина отклонения:</strong> {app.rejectionReason}</p>}
+                <p className="card-text"><strong>Количество редакций:</strong> {app.editCount || 0}</p>
                 <button className="button" onClick={() => setEditingApp(app)}>Редактировать</button>
               </div>
             ))}
@@ -431,7 +518,7 @@ const DeveloperDashboard: React.FC = () => {
               <div className="card">
                 <select
                   value={editingApp.type}
-                  onChange={(e) => setEditingApp({ ...editingApp, type: e.target.value as 'game' | 'app' })}
+                  onChange={(e) => setEditingApp({ ...editingApp, type: e.target.value as 'game' | 'app', categoryGame: '', categoryApps: '', additionalCategoriesGame: [], additionalCategoriesApps: [] })}
                   className="input"
                 >
                   <option value="game">Игра</option>
@@ -477,6 +564,70 @@ const DeveloperDashboard: React.FC = () => {
                   onChange={(e) => setEditingApp({ ...editingApp, video: e.target.value })}
                   className="input"
                 />
+                {editingApp.type === 'game' ? (
+                  <>
+                    <select
+                      value={editingApp.categoryGame || ''}
+                      onChange={(e) => setEditingApp({ ...editingApp, categoryGame: e.target.value })}
+                      className="input"
+                    >
+                      <option value="">Выберите основную категорию</option>
+                      {gameCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <select
+                      multiple
+                      value={editingApp.additionalCategoriesGame || []}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        if (selected.length <= 2) {
+                          setEditingApp({ ...editingApp, additionalCategoriesGame: selected });
+                        }
+                      }}
+                      className="input"
+                    >
+                      {gameCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      value={editingApp.categoryApps || ''}
+                      onChange={(e) => setEditingApp({ ...editingApp, categoryApps: e.target.value })}
+                      className="input"
+                    >
+                      <option value="">Выберите основную категорию</option>
+                      {appCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <select
+                      multiple
+                      value={editingApp.additionalCategoriesApps || []}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        if (selected.length <= 2) {
+                          setEditingApp({ ...editingApp, additionalCategoriesApps: selected });
+                        }
+                      }}
+                      className="input"
+                    >
+                      {appCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
+                <input
+                  type="text"
+                  placeholder="Ссылка на приложение (https://t.me/...)"
+                  value={editingApp.linkApp || ''}
+                  onChange={(e) => setEditingApp({ ...editingApp, linkApp: e.target.value })}
+                  className="input"
+                />
                 <button className="button" onClick={handleEditApp}>Сохранить изменения</button>
                 <button className="button" onClick={() => setEditingApp(null)}>Отмена</button>
               </div>
@@ -493,7 +644,7 @@ const DeveloperDashboard: React.FC = () => {
               <div key={stat.appId} className="card">
                 <h3 className="card-title">{stat.name}</h3>
                 <p className="card-text"><strong>Переходы:</strong> {stat.clicks}</p>
-                <p className="card-text"><strong>Telegram Stars:</strong> {stat.telegramStars}</p>
+                <p className="card-text"><strong>Stars:</strong> {stat.telegramStars}</p>
                 <p className="card-text"><strong>Жалобы:</strong> {stat.complaints}</p>
                 <p className="card-text"><strong>Место в каталоге:</strong> #{stat.catalogRank}</p>
                 <p className="card-text"><strong>Место в основной категории:</strong> #{stat.categoryRank}</p>
@@ -514,17 +665,23 @@ const DeveloperDashboard: React.FC = () => {
             {developer.apps.map(app => (
               <div key={app.id} className="card">
                 <h3 className="card-title">{app.name}</h3>
+                {app.startPromoCatalog && app.finishPromoCatalog && (
+                  <p className="card-text">
+                    <strong>Продвижение в каталоге:</strong> с {new Date(app.startPromoCatalog).toLocaleString()} до {new Date(app.finishPromoCatalog).toLocaleString()}
+                  </p>
+                )}
+                {app.startPromoCategory && app.finishPromoCategory && (
+                  <p className="card-text">
+                    <strong>Продвижение в категории:</strong> с {new Date(app.startPromoCategory).toLocaleString()} до {new Date(app.finishPromoCategory).toLocaleString()}
+                  </p>
+                )}
                 <div className="section">
                   <h4 className="section-title">Продвижение в каталоге</h4>
-                  <button className="button" onClick={() => handlePromote(app.id, 'catalog', 3)}>3 дня (50 Stars)</button>
-                  <button className="button" onClick={() => handlePromote(app.id, 'catalog', 14)}>14 дней (200 Stars)</button>
-                  <button className="button" onClick={() => handlePromote(app.id, 'catalog', 30)}>30 дней (500 Stars)</button>
+                  <button className="button" onClick={() => handlePromote(app.id, 'catalog')}>1 минута (1 Star)</button>
                 </div>
                 <div className="section">
                   <h4 className="section-title">Продвижение в категории</h4>
-                  <button className="button" onClick={() => handlePromote(app.id, 'category', 3)}>3 дня (50 Stars)</button>
-                  <button className="button" onClick={() => handlePromote(app.id, 'category', 14)}>14 дней (200 Stars)</button>
-                  <button className="button" onClick={() => handlePromote(app.id, 'category', 30)}>30 дней (500 Stars)</button>
+                  <button className="button" onClick={() => handlePromote(app.id, 'category')}>2 минуты (2 Stars)</button>
                 </div>
               </div>
             ))}
