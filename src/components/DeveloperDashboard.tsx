@@ -40,6 +40,7 @@ interface App {
   startPromoCategory?: string;
   finishPromoCategory?: string;
   editCount?: number;
+  telegramStarsDonations?: number; // Добавляем поле telegramStarsDonations
 }
 
 interface Stat {
@@ -84,6 +85,8 @@ const DeveloperDashboard: React.FC = () => {
     linkApp: '',
   });
   const [editingApp, setEditingApp] = useState<App | null>(null);
+
+
 
   console.log('DeveloperDashboard: userId=', userId, 'isTelegram=', isTelegram);
 
@@ -254,13 +257,15 @@ const DeveloperDashboard: React.FC = () => {
     }
   };
 
+  const [promotionSource, setPromotionSource] = useState<'developer' | 'app'>('developer');
+
   const handlePromote = async (appId: string, type: 'catalog' | 'category') => {
     try {
-      console.log('Promoting app:', { appId, type });
+      console.log('Promoting app:', { appId, type, source: promotionSource });
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId, type, userId }), // Добавляем userId в тело для проверки
+        body: JSON.stringify({ appId, type, userId, source: promotionSource }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -349,19 +354,19 @@ const DeveloperDashboard: React.FC = () => {
       </div>
 
       {activeTab === 'profile' && (
-        <div>
-          <section className="section">
-            <h2 className="section-title">Профиль разработчика</h2>
-            <div className="card">
-              <p className="card-text"><strong>Дата регистрации:</strong> {new Date(developer.registrationDate).toLocaleDateString()}</p>
-              <p className="card-text"><strong>Количество приложений:</strong> {developer.apps.length}</p>
-              <p className="card-text"><strong>Баланс Stars:</strong> {developer.starsBalance || 0}</p>
-              <p className="card-text"><strong>Реферальный код:</strong> {developer.referralCode}</p>
-              <button className="button" onClick={() => window.open('https://t.me/admin_contact', '_blank')}>
-                Связаться с администрацией
-              </button>
-            </div>
-          </section>
+      <div>
+        <section className="section">
+         <h2 className="section-title">Профиль разработчика</h2>
+          <div className="card">
+           <p className="card-text"><strong>Дата регистрации:</strong> {new Date(developer.registrationDate).toLocaleDateString()}</p>
+           <p className="card-text"><strong>Количество приложений:</strong> {developer.apps.length}</p>
+           <p className="card-text"><strong>Баланс Stars:</strong> {developer.starsBalance || 0}</p>
+            <p className="card-text"><strong>Реферальный код:</strong> {developer.referralCode}</p>
+           <button className="button" onClick={() => window.open('https://t.me/admin_contact', '_blank')}>
+          Связаться с администрацией
+            </button>
+        </div>
+         </section>
         </div>
       )}
 
@@ -696,31 +701,43 @@ const DeveloperDashboard: React.FC = () => {
       {activeTab === 'services' && (
         <div>
           <section className="section">
-            <h2 className="section-title">Услуги</h2>
-            {developer.apps.map(app => (
-              <div key={app.id} className="card">
-                <h3 className="card-title">{app.name}</h3>
-                {app.startPromoCatalog && app.finishPromoCatalog && (
-                  <p className="card-text">
-                    <strong>Продвижение в каталоге:</strong> с {new Date(app.startPromoCatalog).toLocaleString()} до {new Date(app.finishPromoCatalog).toLocaleString()}
-                  </p>
-                )}
-                {app.startPromoCategory && app.finishPromoCategory && (
-                  <p className="card-text">
-                    <strong>Продвижение в категории:</strong> с {new Date(app.startPromoCategory).toLocaleString()} до {new Date(app.finishPromoCategory).toLocaleString()}
-                  </p>
-                )}
-                <div className="section">
-                  <h4 className="section-title">Продвижение в каталоге</h4>
-                  <button className="button" onClick={() => handlePromote(app.id, 'catalog')}>1 минута (1 Star)</button>
-                </div>
-                <div className="section">
-                  <h4 className="section-title">Продвижение в категории</h4>
-                  <button className="button" onClick={() => handlePromote(app.id, 'category')}>2 минуты (2 Stars)</button>
-                </div>
-              </div>
-            ))}
-          </section>
+        <h2 className="section-title">Услуги</h2>
+        {developer.apps.map(app => (
+          <div key={app.id} className="card">
+            <h3 className="card-title">{app.name}</h3>
+            <p className="card-text"><strong>Баланс приложения (донаты):</strong> {app.telegramStarsDonations || 0} Stars</p>
+            {app.startPromoCatalog && app.finishPromoCatalog && (
+              <p className="card-text">
+                <strong>Продвижение в каталоге:</strong> с {new Date(app.startPromoCatalog).toLocaleString()} до {new Date(app.finishPromoCatalog).toLocaleString()}
+              </p>
+            )}
+            {app.startPromoCategory && app.finishPromoCategory && (
+              <p className="card-text">
+                <strong>Продвижение в категории:</strong> с {new Date(app.startPromoCategory).toLocaleString()} до {new Date(app.finishPromoCategory).toLocaleString()}
+              </p>
+            )}
+            <div className="section">
+              <h4 className="section-title">Источник списания звёзд</h4>
+              <select
+                value={promotionSource}
+                onChange={(e) => setPromotionSource(e.target.value as 'developer' | 'app')}
+                className="input"
+              >
+                <option value="developer">Личный кошелёк ({developer.starsBalance || 0} Stars)</option>
+                <option value="app">Баланс приложения ({app.telegramStarsDonations || 0} Stars)</option>
+              </select>
+            </div>
+            <div className="section">
+              <h4 className="section-title">Продвижение в каталоге</h4>
+              <button className="button" onClick={() => handlePromote(app.id, 'catalog')}>1 минута (1 Star)</button>
+            </div>
+            <div className="section">
+              <h4 className="section-title">Продвижение в категории</h4>
+              <button className="button" onClick={() => handlePromote(app.id, 'category')}>2 минуты (2 Stars)</button>
+            </div>
+          </div>
+        ))}
+      </section>
         </div>
       )}
     </div>
