@@ -68,8 +68,8 @@ const DeveloperDashboard: React.FC = () => {
     name: '',
     shortDescription: '',
     longDescription: '',
-    categoryGame: '',
-    categoryApps: '',
+    categoryGame: '' as string | undefined,
+    categoryApps: '' as string | undefined,
     additionalCategoriesGame: [] as string[],
     additionalCategoriesApps: [] as string[],
     icon: '',
@@ -139,16 +139,51 @@ const DeveloperDashboard: React.FC = () => {
   const handleAddApp = async () => {
     try {
       console.log('Adding new app:', newApp);
+      // Создаём объект appData с полной структурой
+      const appData: {
+        type: 'game' | 'app';
+        name: string;
+        shortDescription: string;
+        longDescription: string;
+        categoryGame?: string;
+        categoryApps?: string;
+        additionalCategoriesGame?: string[];
+        additionalCategoriesApps?: string[];
+        icon: string;
+        gallery: string[];
+        video: string;
+        platforms: string[];
+        ageRating: string;
+        inAppPurchases: boolean;
+        supportsTON: boolean;
+        supportsTelegramStars: boolean;
+        contactInfo: string;
+        linkApp: string;
+      } = {
+        type: newApp.type,
+        name: newApp.name,
+        shortDescription: newApp.shortDescription,
+        longDescription: newApp.longDescription,
+        categoryGame: newApp.type === 'game' ? newApp.categoryGame || undefined : undefined,
+        categoryApps: newApp.type === 'app' ? newApp.categoryApps || undefined : undefined,
+        additionalCategoriesGame: newApp.type === 'game' ? newApp.additionalCategoriesGame : undefined,
+        additionalCategoriesApps: newApp.type === 'app' ? newApp.additionalCategoriesApps : undefined,
+        icon: newApp.icon,
+        gallery: newApp.gallery,
+        video: newApp.video,
+        platforms: newApp.platforms,
+        ageRating: newApp.ageRating,
+        inAppPurchases: newApp.inAppPurchases,
+        supportsTON: newApp.supportsTON,
+        supportsTelegramStars: newApp.supportsTelegramStars,
+        contactInfo: newApp.contactInfo,
+        linkApp: newApp.linkApp,
+      };
+
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newApp,
-          categoryGame: newApp.type === 'game' ? newApp.categoryGame : undefined,
-          categoryApps: newApp.type === 'app' ? newApp.categoryApps : undefined,
-          additionalCategoriesGame: newApp.type === 'game' ? newApp.additionalCategoriesGame : undefined,
-          additionalCategoriesApps: newApp.type === 'app' ? newApp.additionalCategoriesApps : undefined,
-        }),
+        body: JSON.stringify(appData),
       });
       if (!response.ok) {
         const errorData = await response.json();
