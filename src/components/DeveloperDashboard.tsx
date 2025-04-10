@@ -260,7 +260,7 @@ const DeveloperDashboard: React.FC = () => {
       const response = await fetch(`https://nebula-server-ypun.onrender.com/api/developer/${userId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId, type }),
+        body: JSON.stringify({ appId, type, userId }), // Добавляем userId в тело для проверки
       });
       if (!response.ok) {
         const errorData = await response.json();
